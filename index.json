@@ -1,7 +1,7 @@
 {
   "format": 1,
   "name": "btmc727's Next Plugins",
-  "description": "Just some Peak Plugins.",
+  "description": "Just Next Plugins.",
   "plugins": {
     "com.btmc727.gifroulette": {
       "name": "GifRoulette",
@@ -18,6 +18,29 @@
           "dependencies": {
             "revenge.api": {
               "version": ">=1 <2"
+            },
+            "discord": {
+              "version": "*"
+            }
+          }
+        }
+      }
+    },
+    "com.otkusteyler.readallplus": {
+      "name": "Read All+",
+      "description": "Adds a button under the server list to mark all unread servers and DMs as read, with per-server and per-DM exclusions.",
+      "author": "OTKUSteyler & VMUser8.1",
+      "channels": {
+        "latest": "1.0.1"
+      },
+      "versions": {
+        "1.0.1": {
+          "url": "https://otkusteyler.github.io/Revenge-Next-Plugins/pool/com.otkusteyler.readallplus@1.0.1.zip",
+          "sha256": "4dd1e0dc37a91c3c0c085e2df94f5f541adb288555917a6543a3a9a70763f64c",
+          "size": 3454,
+          "dependencies": {
+            "revenge.api": {
+              "version": "*"
             },
             "discord": {
               "version": "*"
