@@ -1,0 +1,30 @@
+{
+  "format": 1,
+  "name": "My Plugin Repository",
+  "description": "Example plugin repository from the Revenge plugin template.",
+  "plugins": {
+    "com.btmc727.gifroulette": {
+      "name": "GifRoulette",
+      "description": "Tempt Fate and Send a Gif.",
+      "author": "btmc727",
+      "channels": {
+        "latest": "1.0.0"
+      },
+      "versions": {
+        "1.0.0": {
+          "url": "https://otkusteyler.github.io/Revenge-Next-Plugins/pool/com.btmc727.gifroulette@1.0.0.zip",
+          "sha256": "df911fc7c1017a6a8a5885ce155f1d470efbfea520b0951935bff0267e6cba47",
+          "size": 1329,
+          "dependencies": {
+            "revenge.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {
+              "version": "*"
+            }
+          }
+        }
+      }
+    }
+  }
+}
