@@ -4,9 +4,10 @@
   "name": "Read All+",
   "description": "Adds a button under the server list to mark all unread servers and DMs as read, with per-server and per-DM exclusions.",
   "author": "OTKUSteyler & VMUser8.1",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "dependencies": {
-    "revenge.api": { "version": "*" },
+    "revenge.api": {
+      "version": ">=1 <2"
     "discord": { "version": "*" }
   },
   "dist": {
