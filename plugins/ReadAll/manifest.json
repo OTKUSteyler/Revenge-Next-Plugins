@@ -8,6 +8,7 @@
   "dependencies": {
     "revenge.api": {
       "version": ">=1 <2"
+    },
     "discord": { "version": "*" }
   },
   "dist": {
