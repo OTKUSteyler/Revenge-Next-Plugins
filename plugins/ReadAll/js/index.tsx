@@ -1,16 +1,13 @@
 import React from 'react'
-import { View } from 'react-native'
 import { getModules } from '@revenge-mod/modules/finders'
 import { withProps } from '@revenge-mod/modules/finders/filters'
 import { after } from '@revenge-mod/patcher'
-import { executeClear } from './Clear'
 import { executeClearAll } from './ClearAll'
 import Settings, { bindStorage } from './settings'
 import ReadButton from './ReadButton'
-import type { Mode } from './Clear'
 
 // ─────────────────────────────────────────────────────────────
-// Slash command definitions (Restored)
+// Slash command definitions
 // ─────────────────────────────────────────────────────────────
 
 interface CommandOption {
@@ -48,18 +45,12 @@ function buildCommand(): Command {
 				required: false,
 				choices: [
 					{ name: 'Everything', value: 'all' },
-					{ name: 'Servers only', value: 'servers' },
-					{ name: 'DMs only', value: 'dms' },
 				],
 			},
 		],
 		async execute(args) {
-			const mode = (args?.[0]?.value ?? 'all') as Mode | 'all'
-			if (mode === 'all') {
-				await executeClearAll()
-			} else {
-				await executeClear(mode as Mode)
-			}
+			// For now, just run the clear all function
+			await executeClearAll()
 		},
 	}
 }
@@ -96,21 +87,20 @@ export default plugin({
 			}),
 		)
 
-		// 2. Char Counter Hijack
+		// 2. Char Counter Hijack (Injects the floating pill)
 		console.log('[ReadAll] Injecting into CharCounter...')
 		
 		cleanup(
 			getModules(withProps('CharCounter'), CharCounter => {
 				cleanup(
 					after(CharCounter, 'default', (args: any[], res: any) => {
-						// Replace the counter with our button
 						return React.createElement(ReadButton)
 					})
 				)
 			})
 		)
 
-		// Fallback name
+		// Fallback name just in case Discord renamed the component
 		cleanup(
 			getModules(withProps('CharacterCounter'), CharCounter => {
 				cleanup(
