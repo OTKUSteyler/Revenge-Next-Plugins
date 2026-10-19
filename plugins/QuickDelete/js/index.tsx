@@ -1,4 +1,4 @@
-import { findByProps } from '@revenge-mod/metro/filters'
+import { findByProps } from '@revenge-mod/metro'
 import { instead } from '@revenge-mod/patcher'
 import { storage } from '@revenge-mod/storage'
 import Settings from './Settings'
