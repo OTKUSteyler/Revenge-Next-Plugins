@@ -4,11 +4,11 @@ import { findByProps } from './compat'
 
 // Kept so any other file importing these still works.
 // TILE is now the pill height.
-export const TILE = 40
+export const TILE = 44
 export const MARGIN = 4
 
 // Tweak these to match your theme.
-const PILL_BG = 'rgba(27, 38, 37, 0.92)'
+const PILL_BG = '#1B2625'
 const PILL_BORDER = '#2F3D3B'
 const ICON_COLOR = '#6FD3CB'
 const TEXT_COLOR = '#E8EAEA'
@@ -16,13 +16,15 @@ const TEXT_COLOR = '#E8EAEA'
 const st = StyleSheet.create({
 	row: {
 		alignSelf: 'flex-start',
-		paddingTop: MARGIN,
-		paddingBottom: MARGIN,
+		paddingVertical: MARGIN,
+		paddingHorizontal: 12,
 	},
 	pill: {
 		height: TILE,
+		minWidth: 110,
 		flexDirection: 'row',
 		alignItems: 'center',
+		justifyContent: 'center',
 		paddingHorizontal: 16,
 		borderRadius: TILE / 2,
 		borderWidth: 1,
