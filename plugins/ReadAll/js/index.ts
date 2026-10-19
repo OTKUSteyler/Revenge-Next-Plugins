@@ -1,5 +1,5 @@
 import React from 'react'
-import { View } from 'react-native'
+import { View, StyleSheet } from 'react-native'
 import { getModules } from '@revenge-mod/modules/finders'
 import { withProps } from '@revenge-mod/modules/finders/filters'
 import { after } from '@revenge-mod/patcher'
@@ -96,58 +96,39 @@ export default plugin({
 			}),
 		)
 
-		// ── 2. Floating pill injection ──────────────────────────
-		// Pick the first persistent host that exists in this build.
-		// These all render across the whole logged-in app.
-		const HOST_NAMES = [
-			'BottomTabBar',
-			'TabBar',
-			'MainView',
-			'RootNavigation',
-			'App',
-		] as const
+		// ── 2. Floating pill injection (Chat Input Patch) ───────
+		// We are patching the Chat Input again, but styling it as a floating pill
+		// that hovers just above the message box.
+		cleanup(
+			getModules(withProps('ChannelTextArea'), ChannelTextArea => {
+				cleanup(
+					after(ChannelTextArea, 'default', (args: any[], res: any) => {
+						if (!React.isValidElement(res)) return res
 
-		let host: any
-		for (const name of HOST_NAMES) {
-			const mods = getModules(withProps(name))
-			host = mods.find((m: any) => typeof m?.default === 'function')
-			if (host) break
-		}
-
-		if (!host) {
-			console.warn(
-				'[ReadAll] No persistent host found — floating pill disabled. ' +
-					'Checked: ' +
-					HOST_NAMES.join(', '),
-			)
-		} else {
-			cleanup(
-				after(host, 'default', (args: any[], res: any) => {
-					if (!React.isValidElement(res)) return res
-
-					return React.createElement(
-						View,
-						{ style: { flex: 1 } },
-						res,
-						React.createElement(
+						// Wrap the original input area
+						return React.createElement(
 							View,
-							{
-								// Critical: only the pill itself is tappable,
-								// the wrapper lets touches pass through to the app.
-								pointerEvents: 'box-none',
-								style: {
-									position: 'absolute',
-									right: 16,
-									bottom: 96, // sits above the tab bar; tweak if needed
-									zIndex: 9999,
+							{ style: { flex: 1 } },
+							res,
+							// Our floating pill
+							React.createElement(
+								View,
+								{
+									pointerEvents: 'box-none',
+									style: {
+										position: 'absolute',
+										bottom: 60, // Hovers right above the text box
+										right: 16,
+										zIndex: 9999,
+									},
 								},
-							},
-							React.createElement(ReadButton),
-						),
-					)
-				}),
-			)
-		}
+								React.createElement(ReadButton)
+							)
+						)
+					})
+				)
+			})
+		)
 	},
 
 	SettingsComponent: Settings,
