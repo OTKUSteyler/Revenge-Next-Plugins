@@ -1,14 +1,11 @@
 import React from 'react'
+import { View } from 'react-native'
 import { getModules } from '@revenge-mod/modules/finders'
 import { withProps } from '@revenge-mod/modules/finders/filters'
 import { after } from '@revenge-mod/patcher'
 import { executeClearAll } from './ClearAll'
 import Settings, { bindStorage } from './settings'
 import ReadButton from './ReadButton'
-
-// ─────────────────────────────────────────────────────────────
-// Slash command definitions
-// ─────────────────────────────────────────────────────────────
 
 interface CommandOption {
 	name: string
@@ -37,27 +34,11 @@ function buildCommand(): Command {
 	return {
 		name: 'readall',
 		description: 'Mark all servers and DMs as read',
-		options: [
-			{
-				name: 'mode',
-				description: 'What to clear',
-				type: 3,
-				required: false,
-				choices: [
-					{ name: 'Everything', value: 'all' },
-				],
-			},
-		],
-		async execute(args) {
-			// For now, just run the clear all function
+		async execute() {
 			await executeClearAll()
 		},
 	}
 }
-
-// ─────────────────────────────────────────────────────────────
-// Plugin
-// ─────────────────────────────────────────────────────────────
 
 export default plugin({
 	jsonStorage: {
@@ -87,25 +68,29 @@ export default plugin({
 			}),
 		)
 
-		// 2. Char Counter Hijack (Injects the floating pill)
-		console.log('[ReadAll] Injecting into CharCounter...')
-		
+		// 2. Patch Chat Inbox (ChannelTextArea) & Offset Button
 		cleanup(
-			getModules(withProps('CharCounter'), CharCounter => {
+			getModules(withProps('ChannelTextArea'), ChannelTextArea => {
 				cleanup(
-					after(CharCounter, 'default', (args: any[], res: any) => {
-						return React.createElement(ReadButton)
-					})
-				)
-			})
-		)
+					after(ChannelTextArea, 'default', (args: any[], res: any) => {
+						if (!React.isValidElement(res)) return res
 
-		// Fallback name just in case Discord renamed the component
-		cleanup(
-			getModules(withProps('CharacterCounter'), CharCounter => {
-				cleanup(
-					after(CharCounter, 'default', (args: any[], res: any) => {
-						return React.createElement(ReadButton)
+						// Return the original inbox, but append the button in a 
+						// zero-size wrapper so we don't break the chat bar layout.
+						return React.createElement(
+							React.Fragment,
+							null,
+							res,
+							React.createElement(
+								View,
+								{
+									// Absolute overlay container
+									style: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 0, zIndex: 9999 },
+									pointerEvents: 'box-none',
+								},
+								React.createElement(ReadButton)
+							)
+						)
 					})
 				)
 			})
