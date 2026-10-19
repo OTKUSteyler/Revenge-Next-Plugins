@@ -1,66 +1,83 @@
-import React from 'react'
-import { Pressable, Text, StyleSheet, Alert } from 'react-native'
-import { executeClearAll } from './ClearAll'
-import { getData } from './settings'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { lookupModule } from '@revenge-mod/modules/finders'
+import { withProps } from '@revenge-mod/modules/finders/filters'
+import { executeClear } from './Clear'
 
-export default function ReadButton() {
-  const [busy, setBusy] = React.useState(false)
-  const { pillBottom, pillRight } = getData()
-
-  const run = React.useCallback(async () => {
-    if (busy) return
-    setBusy(true)
-    try {
-      await executeClearAll()
-    } finally {
-      setBusy(false)
-    }
-  }, [busy])
-
-  const onLongPress = React.useCallback(() => {
-    const { excludedServers, excludedDMs } = getData()
-    Alert.alert(
-      'Read All+',
-      `Excluded servers: ${excludedServers.length}\nExcluded DMs: ${excludedDMs.length}\n\nTap to mark everything else as read.`,
-      [{ text: 'OK' }],
-    )
-  }, [])
-
-  return (
-    <Pressable
-      onPress={run}
-      onLongPress={onLongPress}
-      disabled={busy}
-      hitSlop={10}
-      style={({ pressed }) => [
-        styles.pill,
-        { position: 'absolute', bottom: pillBottom, right: pillRight }, // <-- POSITIONING APPLIED
-        pressed && styles.pressed,
-        busy && styles.busy,
-      ]}
-    >
-      <Text style={styles.label}>{busy ? 'Clearing...' : '✓ Read All'}</Text>
-    </Pressable>
-  )
+// Looked up lazily on first press and cached.
+let haptic: any
+function getHaptic() {
+	if (haptic) return haptic
+	// Handles both a plain exports return and an [exports, id] tuple return.
+	const result: any = lookupModule(withProps('triggerHapticFeedback', 'HapticFeedbackTypes'))
+	haptic = Array.isArray(result) ? result[0] : result
+	return haptic
 }
 
-const styles = StyleSheet.create({
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: 'rgba(88,101,242,0.95)', // Discord Blurple
-    shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 8,
-    zIndex: 99999,
-  },
-  pressed: { opacity: 0.85, transform: [{ scale: 0.97 }] },
-  busy: { opacity: 0.6 },
-  label: { color: '#fff', fontWeight: '600', fontSize: 12 },
+// Kept so any other file importing these still works.
+// TILE is now the pill height.
+export const TILE = 44
+export const MARGIN = 4
+
+// Tweak these to match your theme.
+const PILL_BG = '#1B2625'
+const PILL_BORDER = '#2F3D3B'
+const ICON_COLOR = '#6FD3CB'
+const TEXT_COLOR = '#E8EAEA'
+
+const st = StyleSheet.create({
+	row: {
+		alignSelf: 'flex-start',
+		paddingVertical: MARGIN,
+		paddingHorizontal: 12,
+	},
+	pill: {
+		height: TILE,
+		minWidth: 110,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'center',
+		paddingHorizontal: 16,
+		borderRadius: TILE / 2,
+		borderWidth: 1,
+		borderColor: PILL_BORDER,
+		backgroundColor: PILL_BG,
+	},
+	pillPressed: {
+		opacity: 0.7,
+	},
+	icon: {
+		color: ICON_COLOR,
+		fontSize: 18,
+		fontWeight: '700',
+		marginRight: 8,
+	},
+	label: {
+		color: TEXT_COLOR,
+		fontSize: 16,
+		fontWeight: '700',
+	},
 })
+
+export default function ReadButton() {
+	const onPress = () => {
+		const Haptic = getHaptic()
+		Haptic?.triggerHapticFeedback?.(Haptic.HapticFeedbackTypes?.SOFT)
+
+		// Marks servers and DMs as read, skipping anything in the excluded lists from Settings.
+		executeClear('all')
+	}
+
+	return (
+		<View style={st.row}>
+			<Pressable
+				onPress={onPress}
+				accessibilityRole="button"
+				accessibilityLabel="Read All"
+				style={({ pressed }) => [st.pill, pressed && st.pillPressed]}
+			>
+				<Text style={st.icon}>✓</Text>
+				<Text style={st.label}>Read All</Text>
+			</Pressable>
+		</View>
+	)
+}
