@@ -1,113 +1,79 @@
-import { findByProps, findByStoreName, toast } from './compat'
-import { isDMExcluded, isServerExcluded } from './settings'
+import { findByStoreName, findByProps } from './compat'
+import { getData } from './settings'
 
-export type Mode = 'all' | 'servers' | 'dms'
-
-const getStores = () => ({
-	GuildStore: findByStoreName('GuildStore'),
-	GuildChannelStore:
-		findByStoreName('GuildChannelStore') || findByStoreName('ChannelStore'),
-	ChannelStore: findByStoreName('ChannelStore'),
-	ReadStateStore: findByStoreName('ReadStateStore'),
-	FluxDispatcher: findByProps('dispatch', 'subscribe'),
-})
-
-const getDMChannels = (ChannelStore: any, GuildChannelStore: any) => {
-	const out: any[] = []
-	const store = ChannelStore || GuildChannelStore
-	try {
-		const priv = store?.getPrivateChannels?.()
-		if (priv && typeof priv === 'object') {
-			Object.values(priv).forEach((c: any) => c?.id && out.push(c))
-		}
-	} catch {
-		// Silently fail if the store doesn't have this method in the current client version
-	}
-	return out
+export interface ClearAllResult {
+  dms: number
+  channels: number
+  skipped: number
 }
 
-const getUnreadChannels = (mode: Mode) => {
-	const { GuildStore, GuildChannelStore, ChannelStore, ReadStateStore } = getStores()
-	if (!ReadStateStore) return []
+/**
+ * Mark every unread DM and every unread channel in non-excluded servers as read.
+ * Reuses the same store-level ACK that `executeClear` uses.
+ */
+export async function executeClearAll(): Promise<ClearAllResult> {
+  const { excludedServers, excludedDMs } = getData()
+  const excludedS = new Set(excludedServers)
+  const excludedD = new Set(excludedDMs)
 
-	const channels: any[] = []
-	const push = (id: string) => {
-		// Ensure we don't push the same channel twice
-		if (channels.some(c => c.channelId === id)) return
-		
-		channels.push({
-			channelId: id,
-			messageId: ReadStateStore.lastMessageId?.(id) || null,
-			readStateType: 0,
-		})
-	}
+  const result: ClearAllResult = { dms: 0, channels: 0, skipped: 0 }
 
-	// 1. Process Servers
-	if ((mode === 'all' || mode === 'servers') && GuildStore) {
-		try {
-			const guilds = GuildStore.getGuilds?.() || {}
-			Object.values(guilds).forEach((guild: any) => {
-				if (!guild?.id || isServerExcluded(guild.id)) return
-				try {
-					let list: any[] = []
-					const data = (GuildChannelStore || ChannelStore)?.getChannels?.(guild.id)
-					
-					if (data?.SELECTABLE) list = list.concat(data.SELECTABLE)
-					if (data?.VOCAL) list = list.concat(data.VOCAL)
-					
-					list.forEach((c: any) => {
-						const channel = c?.channel || c
-						if (channel?.id && ReadStateStore.hasUnread?.(channel.id)) {
-							push(channel.id)
-						}
-					})
-				} catch {}
-			})
-		} catch {}
-	}
+  // --- find the ACK function used by Discord's read state ---
+  // Try a few common names across builds.
+  const ReadStateStore =
+    findByStoreName('ReadStateStore') ??
+    findByStoreName('ReadStateStore') // same name; fallback below
+  const ack =
+    ReadStateStore?.ack ??
+    ReadStateStore?.ackChannel ??
+    findByProps('ack')?.ack
 
-	// 2. Process DMs
-	if (mode === 'all' || mode === 'dms') {
-		const dms = getDMChannels(ChannelStore, GuildChannelStore)
-		dms.forEach(channel => {
-			if (!isDMExcluded(channel.id) && ReadStateStore.hasUnread?.(channel.id)) {
-				push(channel.id)
-			}
-		})
-	}
+  if (typeof ack !== 'function') {
+    throw new Error('ReadStateStore.ack not found in this build')
+  }
 
-	return channels
-}
+  // ---------- DMs / group DMs ----------
+  const PrivateChannelStore = findByStoreName('PrivateChannelStore')
+  const privateChannels: any[] =
+    PrivateChannelStore?.getPrivateChannels?.() ??
+    Object.values(PrivateChannelStore?.getPrivateChannels?.() ?? {})
 
-export function executeClear(mode: Mode) {
-	const { FluxDispatcher } = getStores()
-	
-	if (!FluxDispatcher || typeof FluxDispatcher.dispatch !== 'function') {
-		return toast('Failed to find Discord Dispatcher. Try again in a moment.')
-	}
+  for (const ch of privateChannels) {
+    const id = ch?.channelId ?? ch?.id
+    if (!id) continue
+    if (excludedD.has(id)) {
+      result.skipped++
+      continue
+    }
+    try {
+      await ack.call(ReadStateStore, id)
+      result.dms++
+    } catch {
+      result.skipped++
+    }
+  }
 
-	const targets = getUnreadChannels(mode)
-	if (targets.length === 0) {
-		return toast('No unread notifications!')
-	}
+  // ---------- Guilds ----------
+  const GuildStore = findByStoreName('GuildStore')
+  const guilds: Record<string, any> = GuildStore?.getGuilds?.() ?? {}
 
-	try {
-		FluxDispatcher.dispatch({
-			type: 'BULK_ACK',
-			context: 'APP',
-			channels: targets,
-		})
+  for (const guild of Object.values(guilds)) {
+    const guildId = guild?.id
+    if (!guildId) continue
+    if (excludedS.has(guildId)) {
+      result.skipped++
+      continue
+    }
+    const channels = guild?.channels ?? {}
+    for (const chId of Object.keys(channels)) {
+      try {
+        await ack.call(ReadStateStore, chId)
+        result.channels++
+      } catch {
+        result.skipped++
+      }
+    }
+  }
 
-		const label =
-			mode === 'all'
-				? 'notifications'
-				: mode === 'servers'
-					? 'server channels'
-					: 'DMs'
-					
-		toast(`Cleared ${targets.length} ${label}!`)
-	} catch (e) {
-		console.error('[ReadAll+] Failed to clear:', e)
-		toast('An error occurred while clearing.')
-	}
+  return result
 }
