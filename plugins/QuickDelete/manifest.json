@@ -1,0 +1,19 @@
+{
+    "format": 1,
+    "id": "com.btmc727.quickdelete",
+    "name": "QuickDelete",
+    "description": "Adds a quick delete option to messages. A plugin port from Vencord.",
+    "author": "The Sun, btmc727 ,Purple_Ξye™",
+    "version": "1.0.0",
+    "dependencies": {
+        "revenge.api": {
+            "version": ">=1 <2"
+        },
+        "discord": {
+            "version": "*"
+        }
+    },
+    "dist": {
+        "script": "index.js"
+    }
+}
