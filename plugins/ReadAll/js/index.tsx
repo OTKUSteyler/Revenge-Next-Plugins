@@ -9,10 +9,6 @@ import Settings, { bindStorage } from './settings'
 import ReadButton from './ReadButton'
 import type { Mode } from './Clear'
 
-// ─────────────────────────────────────────────────────────────
-// Slash command definitions
-// ─────────────────────────────────────────────────────────────
-
 interface CommandOption {
 	name: string
 	description: string
@@ -54,7 +50,6 @@ function buildCommand(): Command {
 			},
 		],
 		async execute(args) {
-			console.log('[ReadAll] Slash command executed with args:', args)
 			const mode = (args?.[0]?.value ?? 'all') as Mode | 'all'
 			if (mode === 'all') {
 				await executeClearAll()
@@ -65,10 +60,6 @@ function buildCommand(): Command {
 	}
 }
 
-// ─────────────────────────────────────────────────────────────
-// Plugin
-// ─────────────────────────────────────────────────────────────
-
 export default plugin({
 	jsonStorage: {
 		default: { excludedServers: [] as string[], excludedDMs: [] as string[] },
@@ -76,20 +67,15 @@ export default plugin({
 	},
 
 	init({ jsonStorage }) {
-		console.log('[ReadAll] init() called')
 		bindStorage(jsonStorage)
 	},
 
 	start({ cleanup }) {
-		console.log('[ReadAll] start() called - Beginning UI injection')
-
 		let command: Command | undefined
 
 		// ── 1. Slash command patch ──────────────────────────────
-		console.log('[ReadAll] Patching slash commands...')
 		cleanup(
 			getModules(withProps('getBuiltInCommands'), store => {
-				console.log('[ReadAll] Found getBuiltInCommands store:', typeof store)
 				cleanup(
 					after(store as any, 'getBuiltInCommands', (res: any) => {
 						if (!Array.isArray(res)) return res
@@ -102,41 +88,27 @@ export default plugin({
 			}),
 		)
 
-		// ── 2. Floating pill injection (Chat Input Patch) ───────
-		console.log('[ReadAll] Looking for ChannelTextArea...')
-		
-		const modules = getModules(withProps('ChannelTextArea'))
-		console.log(`[ReadAll] Found ${modules.length} modules matching "ChannelTextArea"`)
-
-		if (modules.length === 0) {
-			console.warn('[ReadAll] CRITICAL: Could not find ChannelTextArea module. Discord likely updated the component names.')
-		}
-
+		// ── 2. Floating pill injection (Header Patch) ───────────
+		// We patch the chat header to avoid breaking the text input.
 		cleanup(
-			modules.forEach((ChannelTextArea, index) => {
-				console.log(`[ReadAll] Patching module #${index}:`, Object.keys(ChannelTextArea).join(', '))
-				
+			getModules(withProps('ChatHeader'), Header => {
 				cleanup(
-					after(ChannelTextArea, 'default', (args: any[], res: any) => {
-						if (!React.isValidElement(res)) {
-							console.log('[ReadAll] Intercepted render, but result is not a valid React element. Skipping.')
-							return res
-						}
-
-						console.log('[ReadAll] Successfully intercepted ChannelTextArea render! Injecting pill...')
+					after(Header, 'default', (args: any[], res: any) => {
+						if (!React.isValidElement(res)) return res
 
 						return React.createElement(
 							View,
 							{ style: { flex: 1 } },
 							res,
+							// The floating pill positioned in the top right
 							React.createElement(
 								View,
 								{
 									pointerEvents: 'box-none',
 									style: {
 										position: 'absolute',
-										bottom: 60, 
-										right: 16,
+										top: 15, // Adjust this to line up with the title
+										right: 50, // Keeps it away from the search icon
 										zIndex: 9999,
 									},
 								},
