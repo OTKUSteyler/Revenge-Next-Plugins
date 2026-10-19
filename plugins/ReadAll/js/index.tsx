@@ -35,12 +35,12 @@ function nextCommandId(res: any[]): string {
 function buildCommand(): Command {
 	return {
 		name: 'readall',
-		description: 'Mark all servers and DMs as read (respects exclusions)',
+		description: 'Mark all servers and DMs as read',
 		options: [
 			{
 				name: 'mode',
 				description: 'What to clear',
-				type: 3, // STRING
+				type: 3,
 				required: false,
 				choices: [
 					{ name: 'Everything', value: 'all' },
@@ -73,7 +73,7 @@ export default plugin({
 	start({ cleanup }) {
 		let command: Command | undefined
 
-		// ── 1. Slash command patch ──────────────────────────────
+		// 1. Slash command
 		cleanup(
 			getModules(withProps('getBuiltInCommands'), store => {
 				cleanup(
@@ -88,28 +88,31 @@ export default plugin({
 			}),
 		)
 
-		// ── 2. Floating pill injection (Header Patch) ───────────
-		// We patch the chat header to avoid breaking the text input.
+		// 2. App Overlay Injection
+		// We patch the App container itself. This guarantees the pill floats
+		// above the navigation, but we must use pointerEvents="box-none"
+		// on the wrapper so the app remains clickable.
+		console.log('[ReadAll] Injecting floating overlay...')
+		
 		cleanup(
-			getModules(withProps('ChatHeader'), Header => {
+			getModules(withProps('App'), App => {
 				cleanup(
-					after(Header, 'default', (args: any[], res: any) => {
+					after(App, 'default', (args: any[], res: any) => {
 						if (!React.isValidElement(res)) return res
 
 						return React.createElement(
 							View,
 							{ style: { flex: 1 } },
 							res,
-							// The floating pill positioned in the top right
 							React.createElement(
 								View,
 								{
-									pointerEvents: 'box-none',
+									pointerEvents: 'box-none', // Allows clicks to pass through to the app
 									style: {
 										position: 'absolute',
-										top: 15, // Adjust this to line up with the title
-										right: 50, // Keeps it away from the search icon
-										zIndex: 9999,
+										bottom: 120, // Floats above the chat input
+										right: 16,
+										zIndex: 99999, // On top of everything
 									},
 								},
 								React.createElement(ReadButton)
