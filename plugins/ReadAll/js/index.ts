@@ -1,3 +1,5 @@
+import React from 'react'
+import { View, Text, TouchableOpacity } from 'react-native'
 import { getModules } from '@revenge-mod/modules/finders'
 import { withProps } from '@revenge-mod/modules/finders/filters'
 import { after } from '@revenge-mod/patcher'
@@ -79,6 +81,28 @@ function nextCommandId(commands: { id?: string }[]): string {
 	return Number.isNaN(parsed) ? '-1000' : String(parsed - 1)
 }
 
+// --- NEW: Pill Component ---
+function ReadAllPill() {
+	return (
+		<TouchableOpacity
+			onPress={() => executeClear('all')}
+			style={{
+				flexDirection: 'row',
+				alignItems: 'center',
+				backgroundColor: '#2b2d31', // Discord dark theme background matching the Mentions pill
+				borderRadius: 999, // Pill shape
+				paddingHorizontal: 12,
+				paddingVertical: 6,
+				marginLeft: 8,
+			}}
+		>
+			<Text style={{ color: '#dbdee1', fontWeight: '600', fontSize: 14 }}>
+				Read All
+			</Text>
+		</TouchableOpacity>
+	)
+}
+
 export default plugin({
 	jsonStorage: {
 		default: { excludedServers: [] as string[], excludedDMs: [] as string[] },
@@ -90,6 +114,7 @@ export default plugin({
 	start({ cleanup }) {
 		let command: Command | undefined
 
+		// 1. Existing slash command patch
 		cleanup(
 			getModules(withProps('getBuiltInCommands'), store => {
 				cleanup(
@@ -104,6 +129,29 @@ export default plugin({
 					}),
 				)
 			}),
+		)
+
+		// 2. NEW: Patch the Channel Header to inject the pill
+		cleanup(
+			getModules(withProps('ChannelHeader'), ChannelHeader => {
+				cleanup(
+					after(ChannelHeader, 'default', (args: any[], res: any) => {
+						if (!React.isValidElement(res)) return res
+
+						// We wrap the original header content and our pill in a flex row
+						return React.cloneElement(res, {
+							children: React.cloneElement(res.props.children, {
+								children: (
+									<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+										{res.props.children.props.children}
+										<ReadAllPill />
+									</View>
+								)
+							})
+						})
+					})
+				)
+			})
 		)
 	},
 	SettingsComponent: Settings,
