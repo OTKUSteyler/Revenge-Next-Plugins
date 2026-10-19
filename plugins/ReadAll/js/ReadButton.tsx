@@ -1,72 +1,67 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { executeClear } from './Clear'
-import { findByProps } from './compat'
-
-// Kept so any other file importing these still works.
-// TILE is now the pill height.
-export const TILE = 44
-export const MARGIN = 4
-
-// Tweak these to match your theme.
-const PILL_BG = '#1B2625'
-const PILL_BORDER = '#2F3D3B'
-const ICON_COLOR = '#6FD3CB'
-const TEXT_COLOR = '#E8EAEA'
-
-const st = StyleSheet.create({
-	row: {
-		alignSelf: 'flex-start',
-		paddingVertical: MARGIN,
-		paddingHorizontal: 12,
-	},
-	pill: {
-		height: TILE,
-		minWidth: 110,
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'center',
-		paddingHorizontal: 16,
-		borderRadius: TILE / 2,
-		borderWidth: 1,
-		borderColor: PILL_BORDER,
-		backgroundColor: PILL_BG,
-	},
-	pillPressed: {
-		opacity: 0.7,
-	},
-	icon: {
-		color: ICON_COLOR,
-		fontSize: 18,
-		fontWeight: '700',
-		marginRight: 8,
-	},
-	label: {
-		color: TEXT_COLOR,
-		fontSize: 16,
-		fontWeight: '700',
-	},
-})
+import React from 'react'
+import { Pressable, Text, View, StyleSheet, Alert } from 'react-native'
+import { executeClearAll } from './ClearAll'
+import { getData } from './settings'
 
 export default function ReadButton() {
-	const onPress = () => {
-		const Haptic = findByProps('triggerHapticFeedback', 'HapticFeedbackTypes')
-		Haptic?.triggerHapticFeedback?.(Haptic.HapticFeedbackTypes.SOFT)
+  const [busy, setBusy] = React.useState(false)
 
-		// Marks servers and DMs as read, skipping anything in the excluded lists from Settings.
-		executeClear('all')
-	}
+  const run = React.useCallback(async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const res = await executeClearAll()
+      // toast is optional; import from './compat' if you want it
+      // toast(`Cleared ${res.dms} DMs, ${res.channels} channels`)
+    } finally {
+      setBusy(false)
+    }
+  }, [busy])
 
-	return (
-		<View style={st.row}>
-			<Pressable
-				onPress={onPress}
-				accessibilityRole="button"
-				accessibilityLabel="Read All"
-				style={({ pressed }) => [st.pill, pressed && st.pillPressed]}
-			>
-				<Text style={st.icon}>✓</Text>
-				<Text style={st.label}>Read All</Text>
-			</Pressable>
-		</View>
-	)
+  const onLongPress = React.useCallback(() => {
+    const { excludedServers, excludedDMs } = getData()
+    Alert.alert(
+      'Read All+',
+      `Excluded servers: ${excludedServers.length}\nExcluded DMs: ${excludedDMs.length}\n\nTap the pill to mark everything else as read.`,
+      [{ text: 'OK' }],
+    )
+  }, [])
+
+  return (
+    <Pressable
+      onPress={run}
+      onLongPress={onLongPress}
+      disabled={busy}
+      hitSlop={10}
+      style={({ pressed }) => [
+        styles.pill,
+        pressed && styles.pressed,
+        busy && styles.busy,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel="Mark all servers and DMs as read"
+    >
+      <Text style={styles.label}>{busy ? 'Clearing…' : '✓ Read All'}</Text>
+    </Pressable>
+  )
 }
+
+const styles = StyleSheet.create({
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999, // pill
+    backgroundColor: 'rgba(88,101,242,0.95)', // blurple
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 8,
+  },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.97 }] },
+  busy: { opacity: 0.6 },
+  label: { color: '#fff', fontWeight: '600', fontSize: 13 },
+})
