@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { executeClear } from './Clear'
-import { choose, findByProps } from './compat'
+import { findByProps } from './compat'
 
 // Kept so any other file importing these still works.
 // TILE is now the pill height.
@@ -50,12 +50,8 @@ export default function ReadButton() {
 		const Haptic = findByProps('triggerHapticFeedback', 'HapticFeedbackTypes')
 		Haptic?.triggerHapticFeedback?.(Haptic.HapticFeedbackTypes.SOFT)
 
-		choose('👁️ Read All Options', 'Choose what you want to mark as read:', [
-			{ text: 'Mark All Read', onPress: () => executeClear('all') },
-			{ text: 'Servers Only', onPress: () => executeClear('servers') },
-			{ text: 'DMs Only', onPress: () => executeClear('dms') },
-			{ text: 'Cancel', style: 'cancel' },
-		])
+		// Marks servers and DMs as read, skipping anything in the excluded lists from Settings.
+		executeClear('all')
 	}
 
 	return (
@@ -63,7 +59,7 @@ export default function ReadButton() {
 			<Pressable
 				onPress={onPress}
 				accessibilityRole="button"
-				accessibilityLabel="Read All Options"
+				accessibilityLabel="Read All"
 				style={({ pressed }) => [st.pill, pressed && st.pillPressed]}
 			>
 				<Text style={st.icon}>✓</Text>
