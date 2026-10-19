@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, StyleSheet } from 'react-native'
+import { View } from 'react-native'
 import { getModules } from '@revenge-mod/modules/finders'
 import { withProps } from '@revenge-mod/modules/finders/filters'
 import { after } from '@revenge-mod/patcher'
@@ -54,6 +54,7 @@ function buildCommand(): Command {
 			},
 		],
 		async execute(args) {
+			console.log('[ReadAll] Slash command executed with args:', args)
 			const mode = (args?.[0]?.value ?? 'all') as Mode | 'all'
 			if (mode === 'all') {
 				await executeClearAll()
@@ -75,15 +76,20 @@ export default plugin({
 	},
 
 	init({ jsonStorage }) {
+		console.log('[ReadAll] init() called')
 		bindStorage(jsonStorage)
 	},
 
 	start({ cleanup }) {
+		console.log('[ReadAll] start() called - Beginning UI injection')
+
 		let command: Command | undefined
 
 		// ── 1. Slash command patch ──────────────────────────────
+		console.log('[ReadAll] Patching slash commands...')
 		cleanup(
 			getModules(withProps('getBuiltInCommands'), store => {
+				console.log('[ReadAll] Found getBuiltInCommands store:', typeof store)
 				cleanup(
 					after(store as any, 'getBuiltInCommands', (res: any) => {
 						if (!Array.isArray(res)) return res
@@ -97,27 +103,39 @@ export default plugin({
 		)
 
 		// ── 2. Floating pill injection (Chat Input Patch) ───────
-		// We are patching the Chat Input again, but styling it as a floating pill
-		// that hovers just above the message box.
+		console.log('[ReadAll] Looking for ChannelTextArea...')
+		
+		const modules = getModules(withProps('ChannelTextArea'))
+		console.log(`[ReadAll] Found ${modules.length} modules matching "ChannelTextArea"`)
+
+		if (modules.length === 0) {
+			console.warn('[ReadAll] CRITICAL: Could not find ChannelTextArea module. Discord likely updated the component names.')
+		}
+
 		cleanup(
-			getModules(withProps('ChannelTextArea'), ChannelTextArea => {
+			modules.forEach((ChannelTextArea, index) => {
+				console.log(`[ReadAll] Patching module #${index}:`, Object.keys(ChannelTextArea).join(', '))
+				
 				cleanup(
 					after(ChannelTextArea, 'default', (args: any[], res: any) => {
-						if (!React.isValidElement(res)) return res
+						if (!React.isValidElement(res)) {
+							console.log('[ReadAll] Intercepted render, but result is not a valid React element. Skipping.')
+							return res
+						}
 
-						// Wrap the original input area
+						console.log('[ReadAll] Successfully intercepted ChannelTextArea render! Injecting pill...')
+
 						return React.createElement(
 							View,
 							{ style: { flex: 1 } },
 							res,
-							// Our floating pill
 							React.createElement(
 								View,
 								{
 									pointerEvents: 'box-none',
 									style: {
 										position: 'absolute',
-										bottom: 60, // Hovers right above the text box
+										bottom: 60, 
 										right: 16,
 										zIndex: 9999,
 									},
