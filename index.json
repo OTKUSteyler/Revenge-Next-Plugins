@@ -49,6 +49,29 @@
         }
       }
     },
+    "com.btmc727.quickdelete": {
+      "name": "QuickDelete",
+      "description": "Adds a quick delete option to messages. A plugin port from Vencord.",
+      "author": "The Sun, btmc727 ,Purple_Ξye™",
+      "channels": {
+        "latest": "1.0.0"
+      },
+      "versions": {
+        "1.0.0": {
+          "url": "https://otkusteyler.github.io/Revenge-Next-Plugins/pool/com.btmc727.quickdelete@1.0.0.zip",
+          "sha256": "0aa79e6e900d53afad453e5ee29d2302d16ad6011105a93793e5f3188bcadeb0",
+          "size": 909,
+          "dependencies": {
+            "revenge.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {
+              "version": "*"
+            }
+          }
+        }
+      }
+    },
     "com.otkusteyler.readallplus": {
       "name": "Read All+",
       "description": "Adds a button under the server list to mark all unread servers and DMs as read, with per-server and per-DM exclusions.",
