@@ -9,60 +9,11 @@ import Settings, { bindStorage } from './settings'
 import ReadButton from './ReadButton'
 import type { Mode } from './Clear'
 
-interface CommandOption {
-	name: string
-	description: string
-	type: number
-	required?: boolean
-	choices?: { name: string; value: string }[]
-}
-
-interface Command {
-	id?: string
-	name: string
-	description: string
-	options?: CommandOption[]
-	execute: (args: any[], ctx: any) => void | Promise<void>
-}
-
-function nextCommandId(res: any[]): string {
-	const used = new Set(res.map((c: any) => c?.id).filter(Boolean))
-	let n = 1
-	while (used.has(String(n))) n++
-	return String(n)
-}
-
-function buildCommand(): Command {
-	return {
-		name: 'readall',
-		description: 'Mark all servers and DMs as read',
-		options: [
-			{
-				name: 'mode',
-				description: 'What to clear',
-				type: 3,
-				required: false,
-				choices: [
-					{ name: 'Everything', value: 'all' },
-					{ name: 'Servers only', value: 'servers' },
-					{ name: 'DMs only', value: 'dms' },
-				],
-			},
-		],
-		async execute(args) {
-			const mode = (args?.[0]?.value ?? 'all') as Mode | 'all'
-			if (mode === 'all') {
-				await executeClearAll()
-			} else {
-				await executeClear(mode as Mode)
-			}
-		},
-	}
-}
+// ... (Keep Command interfaces and buildCommand here) ...
 
 export default plugin({
 	jsonStorage: {
-		default: { excludedServers: [] as string[], excludedDMs: [] as string[] },
+		default: { excludedServers: [], excludedDMs: [], pillBottom: 60, pillRight: 16 },
 		load: true,
 	},
 
@@ -73,7 +24,7 @@ export default plugin({
 	start({ cleanup }) {
 		let command: Command | undefined
 
-		// 1. Slash command
+		// 1. Slash Command
 		cleanup(
 			getModules(withProps('getBuiltInCommands'), store => {
 				cleanup(
@@ -88,36 +39,29 @@ export default plugin({
 			}),
 		)
 
-		// 2. App Overlay Injection
-		// We patch the App container itself. This guarantees the pill floats
-		// above the navigation, but we must use pointerEvents="box-none"
-		// on the wrapper so the app remains clickable.
-		console.log('[ReadAll] Injecting floating overlay...')
+		// 2. Char Counter Hijack
+		console.log('[ReadAll] Looking for CharCounter to hijack...')
 		
 		cleanup(
-			getModules(withProps('App'), App => {
+			getModules(withProps('CharCounter'), CharCounter => {
 				cleanup(
-					after(App, 'default', (args: any[], res: any) => {
-						if (!React.isValidElement(res)) return res
+					after(CharCounter, 'default', (args: any[], res: any) => {
+						// Replace the counter entirely with our floating button.
+						// It will render inside the Mentions/CharCounter row,
+						// but because we gave ReadButton `position: absolute`,
+						// it will float exactly where the user specified in settings.
+						return React.createElement(ReadButton)
+					})
+				)
+			})
+		)
 
-						return React.createElement(
-							View,
-							{ style: { flex: 1 } },
-							res,
-							React.createElement(
-								View,
-								{
-									pointerEvents: 'box-none', // Allows clicks to pass through to the app
-									style: {
-										position: 'absolute',
-										bottom: 120, // Floats above the chat input
-										right: 16,
-										zIndex: 99999, // On top of everything
-									},
-								},
-								React.createElement(ReadButton)
-							)
-						)
+		// Fallback just in case the name is different in this build
+		cleanup(
+			getModules(withProps('CharacterCounter'), CharCounter => {
+				cleanup(
+					after(CharCounter, 'default', (args: any[], res: any) => {
+						return React.createElement(ReadButton)
 					})
 				)
 			})
