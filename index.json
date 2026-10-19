@@ -3,6 +3,29 @@
   "name": "btmc727's Next Plugins",
   "description": "Just Next Plugins.",
   "plugins": {
+    "com.autumnvn.notypinganimation": {
+      "name": "NoTypingAnimation",
+      "description": "Disables the CPU-intensive typing dots animation. A plugin port from Vencord.",
+      "author": "AutumnVN, btmc727",
+      "channels": {
+        "latest": "1.0.0"
+      },
+      "versions": {
+        "1.0.0": {
+          "url": "https://otkusteyler.github.io/Revenge-Next-Plugins/pool/com.autumnvn.notypinganimation@1.0.0.zip",
+          "sha256": "25bbabf051935ac695a9d03ddbf05b8fe8ddf6006766e35f952217a607caaa52",
+          "size": 649,
+          "dependencies": {
+            "revenge.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {
+              "version": "*"
+            }
+          }
+        }
+      }
+    },
     "com.btmc727.gifroulette": {
       "name": "GifRoulette",
       "description": "Tempt Fate and Send a Gif.",
@@ -31,7 +54,7 @@
       "description": "Adds a button under the server list to mark all unread servers and DMs as read, with per-server and per-DM exclusions.",
       "author": "OTKUSteyler & VMUser8.1",
       "channels": {
-        "latest": "1.0.1"
+        "latest": "1.0.2"
       },
       "versions": {
         "1.0.1": {
@@ -41,6 +64,19 @@
           "dependencies": {
             "revenge.api": {
               "version": "*"
+            },
+            "discord": {
+              "version": "*"
+            }
+          }
+        },
+        "1.0.2": {
+          "url": "https://otkusteyler.github.io/Revenge-Next-Plugins/pool/com.otkusteyler.readallplus@1.0.2.zip",
+          "sha256": "88eb43baea58521bb94c3207ce1391361fb2f0e6fcc52098a78828fc540905f8",
+          "size": 2662,
+          "dependencies": {
+            "revenge.api": {
+              "version": ">=1 <2"
             },
             "discord": {
               "version": "*"
