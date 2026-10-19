@@ -77,7 +77,7 @@
       "description": "Adds a button under the server list to mark all unread servers and DMs as read, with per-server and per-DM exclusions.",
       "author": "OTKUSteyler & VMUser8.1",
       "channels": {
-        "latest": "1.0.4"
+        "latest": "1.0.5"
       },
       "versions": {
         "1.0.1": {
@@ -123,6 +123,19 @@
           "url": "https://otkusteyler.github.io/Revenge-Next-Plugins/pool/com.otkusteyler.readallplus@1.0.4.zip",
           "sha256": "a87deed8447373c65b7629692ccf3a4173fec6e444bbab7014de4adf6d5e8c5d",
           "size": 3092,
+          "dependencies": {
+            "revenge.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {
+              "version": "*"
+            }
+          }
+        },
+        "1.0.5": {
+          "url": "https://otkusteyler.github.io/Revenge-Next-Plugins/pool/com.otkusteyler.readallplus@1.0.5.zip",
+          "sha256": "56b6f60413d27c9cc8bdd354b099c113f7080422cdcc4d01828df967ac71ef3f",
+          "size": 3087,
           "dependencies": {
             "revenge.api": {
               "version": ">=1 <2"
