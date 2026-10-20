@@ -44,11 +44,13 @@ interface ApplicationCommand {
 	type?: number
 }
 
+type GetBuiltInCommands = (
+	type: number | number[],
+	...rest: unknown[]
+) => ApplicationCommand[]
+
 interface CommandsModule {
-	getBuiltInCommands(
-		type: number | number[],
-		...rest: unknown[]
-	): ApplicationCommand[]
+	getBuiltInCommands: GetBuiltInCommands
 }
 
 interface MessageUtil {
@@ -91,30 +93,36 @@ export default plugin({
 			return urls[Math.floor(Math.random() * urls.length)]!
 		}
 
+		// FIX 1: `readBuiltIns` is a reference to getBuiltInCommands captured
+		// BEFORE we patch it, and registerCommand runs BEFORE the patch is
+		// installed. Previously this called the already-patched function, which
+		// re-entered our own patch (and any other plugin's patch, e.g. petpet).
 		function registerCommand(
-			commandsModule: CommandsModule,
+			readBuiltIns: GetBuiltInCommands,
 			command: ApplicationCommand,
 		): () => void {
 			let builtInCommands: ApplicationCommand[]
 			try {
-				builtInCommands = commandsModule.getBuiltInCommands(
+				builtInCommands = readBuiltIns(
 					ApplicationCommandType.CHAT,
 					true,
 					false,
 				)
 			} catch {
-				builtInCommands = commandsModule.getBuiltInCommands(
+				builtInCommands = readBuiltIns(
 					Object.values(ApplicationCommandType),
 					true,
 					false,
 				)
 			}
 
-			builtInCommands.sort(
+			// FIX 2: sort a copy. Sorting in place reordered Discord's own
+			// cached built-in command array.
+			const sorted = [...(builtInCommands ?? [])].sort(
 				(a, b) => parseInt(b.id ?? '0', 10) - parseInt(a.id ?? '0', 10),
 			)
 
-			const lastCommand = builtInCommands[builtInCommands.length - 1]
+			const lastCommand = sorted[sorted.length - 1]
 			if (lastCommand?.id)
 				command.id = (parseInt(lastCommand.id, 10) - 1).toString()
 
@@ -129,27 +137,45 @@ export default plugin({
 			commands.push(command)
 
 			return () => {
-				commands = commands.filter(c => c.id !== command.id)
+				commands = commands.filter(c => c !== command)
 			}
 		}
 
 		function patchBuiltInCommands(commandsModule: CommandsModule): () => void {
+			// FIX 3: re-entrancy guard. If another plugin's patch on the same
+			// function ends up calling back into this one, return the last
+			// result instead of calling `original` again. That is what breaks
+			// the gifroulette <-> petpet infinite recursion.
+			let depth = 0
+			let lastResult: ApplicationCommand[] = []
+
 			return instead(
 				commandsModule as any,
 				'getBuiltInCommands',
 				(args: any[], original: (...a: any[]) => any) => {
-					const result: ApplicationCommand[] =
-						original.apply(commandsModule, args) ?? []
+					if (depth > 0) return lastResult
 
-					const type = args[0]
-					const wanted: number[] = Array.isArray(type) ? type : [type]
+					depth++
+					try {
+						const result: ApplicationCommand[] =
+							original.apply(commandsModule, args) ?? []
 
-					return [
-						...result,
-						...commands.filter(c =>
-							wanted.includes(c.type ?? ApplicationCommandType.CHAT),
-						),
-					]
+						const type = args[0]
+						const wanted: number[] = Array.isArray(type) ? type : [type]
+
+						const merged = [
+							...result,
+							...commands.filter(
+								c =>
+									wanted.includes(c.type ?? ApplicationCommandType.CHAT) &&
+									!result.includes(c),
+							),
+						]
+						lastResult = merged
+						return merged
+					} finally {
+						depth--
+					}
 				},
 			)
 		}
@@ -168,9 +194,11 @@ export default plugin({
 				},
 			),
 			getModules(withProps<CommandsModule>('getBuiltInCommands'), Commands => {
-				cleanup(patchBuiltInCommands(Commands))
+				// Capture the unpatched function first, register, THEN patch.
+				const readBuiltIns = Commands.getBuiltInCommands.bind(Commands)
+
 				cleanup(
-					registerCommand(Commands, {
+					registerCommand(readBuiltIns, {
 						name: 'gifroulette',
 						displayName: 'GIF Roulette',
 						description: 'Sends a random GIF from your favorites',
@@ -185,6 +213,7 @@ export default plugin({
 						},
 					}),
 				)
+				cleanup(patchBuiltInCommands(Commands))
 			}),
 			() => {
 				commands = []
