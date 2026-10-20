@@ -1,101 +1,50 @@
 import React from 'react'
-import { View } from 'react-native'
+import { Text, View } from 'react-native'
 import { getModules } from '@revenge-mod/modules/finders'
-import { withProps } from '@revenge-mod/modules/finders/filters'
-import { after } from '@revenge-mod/patcher'
-import { executeClearAll } from './ClearAll'
-import Settings, { bindStorage } from './settings'
-import ReadButton from './ReadButton'
+import { executeClearAll } from '@revenge-mod/.../ClearAll' // 指向你的 executeClearAll 实现
 
-interface CommandOption {
-	name: string
-	description: string
-	type: number
-	required?: boolean
-	choices?: { name: string; value: string }[]
+
+export function DrawerReadAllButton() {
+    return React.createElement(
+        View,
+        {
+            style: {
+                marginHorizontal: 12,
+                marginVertical: 8,
+                paddingVertical: 10,
+                paddingHorizontal: 14,
+                borderRadius: 8,
+                backgroundColor: 'rgba(255,255,255,0.08)',
+            },
+            onStartShouldSetResponder: () => true,
+            onResponderRelease: () => { void executeClearAll() },
+        },
+        React.createElement(
+            Text,
+            { style: { color: '#fff', fontWeight: '600', textAlign: 'center' } },
+            'Read All',
+        ),
+    )
 }
 
-interface Command {
-	id?: string
-	name: string
-	description: string
-	options?: CommandOption[]
-	execute: (args: any[], ctx: any) => void | Promise<void>
+export function patchReadAllInDrawer(
+    cleanups: (() => void)[],
+    isDrawerContainer: (type: any, props: any) => boolean,
+): boolean {
+    const mods = getModules((m: any) => typeof m?.createElement === 'function')
+    const target = mods?.[0]
+    if (!target) return false
+
+    const orig = target.createElement
+    target.createElement = function (type: any, props: any, ...rest: any[]) {
+        const el = orig.call(this, type, props, ...rest)
+        if (!isDrawerContainer(type, props) || !React.isValidElement(el)) return el
+        const kids = (el.props as any)?.children
+        const arr = Array.isArray(kids) ? kids : kids ? [kids] : []
+        return React.cloneElement(el as any, {
+            children: [...arr, React.createElement(DrawerReadAllButton, { key: 'readall-drawer' })],
+        })
+    }
+    cleanups.push(() => { target.createElement = orig })
+    return true
 }
-
-function nextCommandId(res: any[]): string {
-	const used = new Set(res.map((c: any) => c?.id).filter(Boolean))
-	let n = 1
-	while (used.has(String(n))) n++
-	return String(n)
-}
-
-function buildCommand(): Command {
-	return {
-		name: 'readall',
-		description: 'Mark all servers and DMs as read',
-		async execute() {
-			await executeClearAll()
-		},
-	}
-}
-
-export default plugin({
-	jsonStorage: {
-		default: { excludedServers: [], excludedDMs: [], pillBottom: 60, pillRight: 16 },
-		load: true,
-	},
-
-	init({ jsonStorage }) {
-		bindStorage(jsonStorage)
-	},
-
-	start({ cleanup }) {
-		let command: Command | undefined
-
-		// 1. Slash Command Patch
-		cleanup(
-			getModules(withProps('getBuiltInCommands'), store => {
-				cleanup(
-					after(store as any, 'getBuiltInCommands', (res: any) => {
-						if (!Array.isArray(res)) return res
-						const cmd = (command ??= buildCommand())
-						cmd.id ??= nextCommandId(res)
-						if (res.some((c: any) => c?.id === cmd.id)) return res
-						return [...res, cmd]
-					}),
-				)
-			}),
-		)
-
-		// 2. Patch Chat Inbox (ChannelTextArea) & Offset Button
-		cleanup(
-			getModules(withProps('ChannelTextArea'), ChannelTextArea => {
-				cleanup(
-					after(ChannelTextArea, 'default', (args: any[], res: any) => {
-						if (!React.isValidElement(res)) return res
-
-						// Return the original inbox, but append the button in a 
-						// zero-size wrapper so we don't break the chat bar layout.
-						return React.createElement(
-							React.Fragment,
-							null,
-							res,
-							React.createElement(
-								View,
-								{
-									// Absolute overlay container
-									style: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 0, zIndex: 9999 },
-									pointerEvents: 'box-none',
-								},
-								React.createElement(ReadButton)
-							)
-						)
-					})
-				)
-			})
-		)
-	},
-
-	SettingsComponent: Settings,
-})
