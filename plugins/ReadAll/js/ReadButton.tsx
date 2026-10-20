@@ -1,83 +1,56 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { lookupModule } from '@revenge-mod/modules/finders'
+import React from 'react'
+import { View } from 'react-native'
+import { getModules } from '@revenge-mod/modules/finders'
 import { withProps } from '@revenge-mod/modules/finders/filters'
-import { executeClear } from './Clear'
+import { executeClearAll } from '../ClearAll'
 
-// Looked up lazily on first press and cached.
-let haptic: any
-function getHaptic() {
-	if (haptic) return haptic
-	// Handles both a plain exports return and an [exports, id] tuple return.
-	const result: any = lookupModule(withProps('triggerHapticFeedback', 'HapticFeedbackTypes'))
-	haptic = Array.isArray(result) ? result[0] : result
-	return haptic
+// 一个适配抽屉布局的行按钮（非绝对定位）
+export function DrawerReadAllButton() {
+    return React.createElement(
+        View,
+        {
+            style: {
+                marginHorizontal: 12,
+                marginVertical: 8,
+                paddingVertical: 10,
+                paddingHorizontal: 14,
+                borderRadius: 8,
+                backgroundColor: 'rgba(255,255,255,0.08)',
+            },
+            onStartShouldSetResponder: () => true,
+            onResponderRelease: () => { void executeClearAll() },
+        },
+        React.createElement(
+            require('react-native').Text,
+            { style: { color: '#fff', fontWeight: '600', textAlign: 'center' } },
+            'Read All',
+        ),
+    )
 }
 
-// Kept so any other file importing these still works.
-// TILE is now the pill height.
-export const TILE = 44
-export const MARGIN = 4
+/**
+ * 在抽屉容器 children 末尾追加 Read All 按钮。
+ * 依赖调用方已有的抽屉容器判据 isDrawerContainer。
+ */
+export function patchReadAllInDrawer(
+    cleanups: (() => void)[],
+    isDrawerContainer: (type: any, props: any) => boolean,
+) {
+    const target = getModules(withProps('createElement'))[0]
+    if (!target) return false
 
-// Tweak these to match your theme.
-const PILL_BG = '#1B2625'
-const PILL_BORDER = '#2F3D3B'
-const ICON_COLOR = '#6FD3CB'
-const TEXT_COLOR = '#E8EAEA'
+    const orig = target.createElement
+    target.createElement = function (type: any, props: any, ...rest: any[]) {
+        const el = orig.call(this, type, props, ...rest)
+        if (!isDrawerContainer(type, props)) return el
+        if (!React.isValidElement(el)) return el
 
-const st = StyleSheet.create({
-	row: {
-		alignSelf: 'flex-start',
-		paddingVertical: MARGIN,
-		paddingHorizontal: 12,
-	},
-	pill: {
-		height: TILE,
-		minWidth: 110,
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'center',
-		paddingHorizontal: 16,
-		borderRadius: TILE / 2,
-		borderWidth: 1,
-		borderColor: PILL_BORDER,
-		backgroundColor: PILL_BG,
-	},
-	pillPressed: {
-		opacity: 0.7,
-	},
-	icon: {
-		color: ICON_COLOR,
-		fontSize: 18,
-		fontWeight: '700',
-		marginRight: 8,
-	},
-	label: {
-		color: TEXT_COLOR,
-		fontSize: 16,
-		fontWeight: '700',
-	},
-})
-
-export default function ReadButton() {
-	const onPress = () => {
-		const Haptic = getHaptic()
-		Haptic?.triggerHapticFeedback?.(Haptic.HapticFeedbackTypes?.SOFT)
-
-		// Marks servers and DMs as read, skipping anything in the excluded lists from Settings.
-		executeClear('all')
-	}
-
-	return (
-		<View style={st.row}>
-			<Pressable
-				onPress={onPress}
-				accessibilityRole="button"
-				accessibilityLabel="Read All"
-				style={({ pressed }) => [st.pill, pressed && st.pillPressed]}
-			>
-				<Text style={st.icon}>✓</Text>
-				<Text style={st.label}>Read All</Text>
-			</Pressable>
-		</View>
-	)
+        const kids = el.props?.children
+        const arr = Array.isArray(kids) ? kids : kids ? [kids] : []
+        return React.cloneElement(el, {
+            children: [...arr, React.createElement(DrawerReadAllButton, { key: 'readall-drawer' })],
+        })
+    }
+    cleanups.push(() => { target.createElement = orig })
+    return true
 }
