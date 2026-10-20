@@ -2,7 +2,7 @@ import React from 'react'
 import { View } from 'react-native'
 import { getModules } from '@revenge-mod/modules/finders'
 import { withProps } from '@revenge-mod/modules/finders/filters'
-import { executeClearAll } from '../ClearAll'
+import { executeClearAll } from './ClearAll'
 
 // 一个适配抽屉布局的行按钮（非绝对定位）
 export function DrawerReadAllButton() {
