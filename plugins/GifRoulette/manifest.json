@@ -4,7 +4,7 @@
 	"name": "GifRoulette",
 	"description": "Tempt Fate and Send a Gif.",
 	"author": "btmc727",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"dependencies": {
 		"revenge.api": {
 			"version": ">=1 <2"
