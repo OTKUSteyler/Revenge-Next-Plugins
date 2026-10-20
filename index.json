@@ -31,7 +31,7 @@
       "description": "Tempt Fate and Send a Gif.",
       "author": "btmc727",
       "channels": {
-        "latest": "1.0.1"
+        "latest": "1.0.2"
       },
       "versions": {
         "1.0.0": {
@@ -50,6 +50,19 @@
         "1.0.1": {
           "url": "https://otkusteyler.github.io/Revenge-Next-Plugins/pool/com.btmc727.gifroulette@1.0.1.zip",
           "sha256": "8a3fcf4017106bcfe64f06f07f9df223f0de4c1a3631a8c9347f93b65b356251",
+          "size": 1387,
+          "dependencies": {
+            "revenge.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {
+              "version": "*"
+            }
+          }
+        },
+        "1.0.2": {
+          "url": "https://otkusteyler.github.io/Revenge-Next-Plugins/pool/com.btmc727.gifroulette@1.0.2.zip",
+          "sha256": "72cd094869a177a7a92ad9d1474c46cec5d1587f9f5035d1e1941b6fd891de4a",
           "size": 1387,
           "dependencies": {
             "revenge.api": {
