@@ -1,7 +1,7 @@
 import React from 'react'
 import { Text, View } from 'react-native'
 import { getModules } from '@revenge-mod/modules/finders'
-import { executeClearAll } from '@revenge-mod/.../ClearAll' // 指向你的 executeClearAll 实现
+import { executeClearAll } from '@revenge-mod/./ClearAll'  
 
 
 export function DrawerReadAllButton() {
